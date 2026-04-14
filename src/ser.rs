@@ -135,9 +135,7 @@ fn serialize_struct<'mem, 'facet, S: Serializer>(
     shape: &'static Shape,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
-    let ps = peek
-        .into_struct()
-        .map_err(|e| serde::ser::Error::custom(e))?;
+    let ps = peek.into_struct().map_err(serde::ser::Error::custom)?;
     let name = shape.effective_name();
 
     match kind {
@@ -236,9 +234,7 @@ impl<'a, 'mem, 'facet> Serialize for StructVariantMapValue<'a, 'mem, 'facet> {
 }
 
 fn serialize_seq<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::Ok, S::Error> {
-    let list = peek
-        .into_list_like()
-        .map_err(|e| serde::ser::Error::custom(e))?;
+    let list = peek.into_list_like().map_err(serde::ser::Error::custom)?;
     let mut state = serializer.serialize_seq(Some(list.len()))?;
     for item in list.iter() {
         state.serialize_element(&PeekSerialize(item))?;
@@ -247,7 +243,7 @@ fn serialize_seq<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::
 }
 
 fn serialize_set<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::Ok, S::Error> {
-    let set = peek.into_set().map_err(|e| serde::ser::Error::custom(e))?;
+    let set = peek.into_set().map_err(serde::ser::Error::custom)?;
     let mut state = serializer.serialize_seq(Some(set.len()))?;
     for item in set.iter() {
         state.serialize_element(&PeekSerialize(item))?;
@@ -256,7 +252,7 @@ fn serialize_set<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::
 }
 
 fn serialize_map<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::Ok, S::Error> {
-    let map = peek.into_map().map_err(|e| serde::ser::Error::custom(e))?;
+    let map = peek.into_map().map_err(serde::ser::Error::custom)?;
     let mut state = serializer.serialize_map(Some(map.len()))?;
     for (k, v) in map.iter() {
         state.serialize_entry(&PeekSerialize(k), &PeekSerialize(v))?;
@@ -265,9 +261,7 @@ fn serialize_map<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::
 }
 
 fn serialize_option<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::Ok, S::Error> {
-    let opt = peek
-        .into_option()
-        .map_err(|e| serde::ser::Error::custom(e))?;
+    let opt = peek.into_option().map_err(serde::ser::Error::custom)?;
     match opt.value() {
         Some(inner) => serializer.serialize_some(&PeekSerialize(inner)),
         None => serializer.serialize_none(),
@@ -276,7 +270,7 @@ fn serialize_option<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<
 
 fn serialize_result<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::Ok, S::Error> {
     // Serialize as externally tagged enum: {"Ok": value} or {"Err": value}
-    let pe = peek.into_enum().map_err(|e| serde::ser::Error::custom(e))?;
+    let pe = peek.into_enum().map_err(serde::ser::Error::custom)?;
     let variant_idx = pe.variant_index().map_err(serde::ser::Error::custom)?;
     let variant = pe.active_variant().map_err(serde::ser::Error::custom)?;
     let variant_name = variant.effective_name();
@@ -295,9 +289,7 @@ fn serialize_result<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<
 }
 
 fn serialize_pointer<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result<S::Ok, S::Error> {
-    let ptr = peek
-        .into_pointer()
-        .map_err(|e| serde::ser::Error::custom(e))?;
+    let ptr = peek.into_pointer().map_err(serde::ser::Error::custom)?;
     let inner = ptr
         .borrow_inner()
         .ok_or_else(|| serde::ser::Error::custom("cannot borrow pointer inner value"))?;
