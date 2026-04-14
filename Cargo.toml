@@ -15,7 +15,7 @@ facet = { version = "0.44", default-features = false, features = ["alloc"] }
 facet-reflect = { version = "0.44", default-features = false, features = [
     "alloc",
 ] }
-serde = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 facet-json = "0.44"
