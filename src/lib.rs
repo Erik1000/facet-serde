@@ -1,14 +1,17 @@
 #![forbid(unsafe_code)]
 
 mod de;
+mod module;
 mod ser;
 
+use derive_more::{AsMut, AsRef, Deref, DerefMut, Display, From};
 use facet::Facet;
-use facet_reflect::{Partial, Peek};
+use facet_reflect::Partial;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::de::PartialSeed;
-use crate::ser::PeekSerialize;
+
+pub use module::{deserialize, serialize};
 
 /// An adapter type that bridges the [`facet`](facet) and [`serde`] ecosystems.
 ///
@@ -40,6 +43,25 @@ use crate::ser::PeekSerialize;
 /// let roundtrip: Adapter<Point> = serde_json::from_str(&json).unwrap();
 /// assert_eq!(roundtrip.into_inner().x, 1.0);
 /// ```
+#[derive(
+    Debug,
+    Facet,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Display,
+    Deref,
+    DerefMut,
+    From,
+    Clone,
+    Copy,
+    AsRef,
+    AsMut,
+)]
+#[repr(transparent)]
 pub struct Adapter<T>(pub T);
 
 impl<T> Adapter<T> {
@@ -64,8 +86,7 @@ where
     T: Facet<'static>,
 {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let peek = Peek::new(&self.0);
-        PeekSerialize(peek).serialize(serializer)
+        crate::serialize(self, serializer)
     }
 }
 
@@ -82,24 +103,6 @@ where
             .materialize::<T>()
             .map_err(serde::de::Error::custom)?;
         Ok(Adapter(value))
-    }
-}
-
-impl<T: std::fmt::Debug> std::fmt::Debug for Adapter<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl<T: PartialEq> PartialEq for Adapter<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<T: Clone> Clone for Adapter<T> {
-    fn clone(&self) -> Self {
-        Adapter(self.0.clone())
     }
 }
 

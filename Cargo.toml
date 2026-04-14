@@ -11,6 +11,13 @@ categories = ["encoding", "no-std"]
 keywords = ["serde", "facet", "serialization"]
 
 [dependencies]
+derive_more = { version = "2.1.1", features = [
+    "as_ref",
+    "deref",
+    "deref_mut",
+    "display",
+    "from",
+] }
 facet = { version = "0.44", default-features = false, features = ["alloc"] }
 facet-reflect = { version = "0.44", default-features = false, features = [
     "alloc",
