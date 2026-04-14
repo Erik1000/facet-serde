@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "Adapter to (de)serialize facet types with serde"
 readme = "README.md"
 repository = "https://github.com/Erik1000/facet-serde"
-categories = ["encoding", "no_std"]
+categories = ["encoding", "no-std"]
 keywords = ["serde", "facet", "serialization"]
 
 [dependencies]
