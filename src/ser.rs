@@ -1,4 +1,4 @@
-use facet_core::{Def, Shape, StructKind, Type, UserType};
+use facet::{Def, Shape, StructKind, Type, UserType};
 use facet_reflect::{HasFields, Peek, PeekEnum, ScalarType};
 use serde::ser::{SerializeMap, SerializeSeq, SerializeTupleStruct, SerializeTupleVariant};
 use serde::{Serialize, Serializer};

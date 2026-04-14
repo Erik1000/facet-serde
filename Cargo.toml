@@ -2,12 +2,20 @@
 name = "facet-serde"
 version = "0.1.0"
 edition = "2024"
+authors = ["Erik Tesar <erik@erik-tesar.com>"]
+license = "MIT OR Apache-2.0"
+description = "Adapter to (de)serialize facet types with serde"
+readme = "README.md"
+repository = "https://github.com/Erik1000/facet-serde"
+categories = ["encoding", "no_std"]
+keywords = ["serde", "facet", "serialization"]
 
 [dependencies]
-facet = "0.44"
-facet-core = "0.44"
-facet-reflect = "0.44"
-serde = "1"
+facet = { version = "0.44", default-features = false, features = ["alloc"] }
+facet-reflect = { version = "0.44", default-features = false, features = [
+    "alloc",
+] }
+serde = { version = "1", default-features = false }
 
 [dev-dependencies]
 facet-json = "0.44"

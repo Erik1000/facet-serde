@@ -1,4 +1,4 @@
-use facet_core::{Def, Facet, Shape, StructKind, Type, UserType};
+use facet::{Def, Facet, Shape, StructKind, Type, UserType};
 use facet_reflect::{Partial, ScalarType};
 use serde::Deserializer;
 use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
@@ -75,7 +75,7 @@ impl<'de> DeserializeSeed<'de> for PartialSeed {
                     let field_names: Vec<&'static str> = st
                         .fields
                         .iter()
-                        .map(|f: &facet_core::Field| f.effective_name())
+                        .map(|f: &facet::Field| f.effective_name())
                         .collect();
                     let visitor = StructVisitor {
                         partial: self.partial,
@@ -641,7 +641,7 @@ impl<'de> Visitor<'de> for EnumVisitor {
                     v.data
                         .fields
                         .iter()
-                        .map(|f: &facet_core::Field| f.effective_name())
+                        .map(|f: &facet::Field| f.effective_name())
                         .collect()
                 };
                 let visitor = StructVisitor { partial };

@@ -3,18 +3,18 @@
 mod de;
 mod ser;
 
-use facet_core::Facet;
+use facet::Facet;
 use facet_reflect::{Partial, Peek};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::de::PartialSeed;
 use crate::ser::PeekSerialize;
 
-/// An adapter type that bridges the [`facet`](facet_core) and [`serde`] ecosystems.
+/// An adapter type that bridges the [`facet`](facet) and [`serde`] ecosystems.
 ///
 /// `Adapter<T>` wraps any type `T` that implements [`Facet`] and provides
 /// implementations of [`serde::Serialize`] and [`serde::Deserialize`] by using
-/// the underlying facet [`Shape`](facet_core::Shape) for reflection.
+/// the underlying facet [`Shape`](facet::Shape) for reflection.
 ///
 /// # Serialization
 ///
