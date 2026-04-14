@@ -1,5 +1,7 @@
 # facet-serde
 
+This crate was mainly created by Claude Opus.
+
 A bridge between [facet](https://crates.io/crates/facet) and [serde](https://crates.io/crates/serde).
 
 `facet-serde` provides `Adapter<T>`, a newtype wrapper that implements
