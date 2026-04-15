@@ -2,7 +2,19 @@ use facet::{Def, Facet, Shape, StructKind, Type, UserType};
 use facet_reflect::{Partial, ScalarType};
 use serde::Deserializer;
 use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::{Mutex, OnceLock};
+
+fn cached_static_str_slice(
+    key: usize,
+    compute: impl FnOnce() -> Vec<&'static str>,
+) -> &'static [&'static str] {
+    static CACHE: OnceLock<Mutex<HashMap<usize, &'static [&'static str]>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut map = cache.lock().unwrap();
+    map.entry(key).or_insert_with(|| Vec::leak(compute()))
+}
 
 /// A [`DeserializeSeed`] implementation that drives a [`Partial`] builder.
 ///
@@ -72,19 +84,17 @@ impl<'de> DeserializeSeed<'de> for PartialSeed {
         match &shape.ty {
             Type::User(UserType::Struct(st)) => match st.kind {
                 StructKind::Struct => {
-                    let field_names: Vec<&'static str> = st
-                        .fields
-                        .iter()
-                        .map(|f: &facet::Field| f.effective_name())
-                        .collect();
+                    let field_names =
+                        cached_static_str_slice(std::ptr::from_ref(st) as usize, || {
+                            st.fields
+                                .iter()
+                                .map(|f: &facet::Field| f.effective_name())
+                                .collect()
+                        });
                     let visitor = StructVisitor {
                         partial: self.partial,
                     };
-                    deserializer.deserialize_struct(
-                        shape.effective_name(),
-                        Vec::leak(field_names),
-                        visitor,
-                    )
+                    deserializer.deserialize_struct(shape.effective_name(), field_names, visitor)
                 }
                 StructKind::TupleStruct | StructKind::Tuple => {
                     let len = st.fields.len();
@@ -101,16 +111,14 @@ impl<'de> DeserializeSeed<'de> for PartialSeed {
                 }
             },
             Type::User(UserType::Enum(et)) => {
-                let variant_names: Vec<&'static str> =
-                    et.variants.iter().map(|v| v.effective_name()).collect();
+                let variant_names =
+                    cached_static_str_slice(std::ptr::from_ref(et) as usize, || {
+                        et.variants.iter().map(|v| v.effective_name()).collect()
+                    });
                 let visitor = EnumVisitor {
                     partial: self.partial,
                 };
-                deserializer.deserialize_enum(
-                    shape.effective_name(),
-                    Vec::leak(variant_names),
-                    visitor,
-                )
+                deserializer.deserialize_enum(shape.effective_name(), variant_names, visitor)
             }
             _ => Err(de::Error::custom(format!(
                 "unsupported facet shape for deserialization: {:?}",
@@ -594,6 +602,34 @@ impl<'de> Visitor<'de> for OptionVisitor {
 
 // ── Enum Visitor ────────────────────────────────────────────────────────
 
+struct VariantNameSeed;
+
+impl<'de> DeserializeSeed<'de> for VariantNameSeed {
+    type Value = String;
+
+    fn deserialize<D: Deserializer<'de>>(self, deserializer: D) -> Result<String, D::Error> {
+        deserializer.deserialize_identifier(VariantNameVisitor)
+    }
+}
+
+struct VariantNameVisitor;
+
+impl<'de> Visitor<'de> for VariantNameVisitor {
+    type Value = String;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "a variant name")
+    }
+
+    fn visit_str<E: de::Error>(self, v: &str) -> Result<String, E> {
+        Ok(v.to_owned())
+    }
+
+    fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
+        Ok(v.to_string())
+    }
+}
+
 struct EnumVisitor {
     partial: Partial<'static, false>,
 }
@@ -606,7 +642,7 @@ impl<'de> Visitor<'de> for EnumVisitor {
     }
 
     fn visit_enum<A: EnumAccess<'de>>(self, data: A) -> Result<Self::Value, A::Error> {
-        let (variant_name, variant_access): (String, _) = data.variant()?;
+        let (variant_name, variant_access) = data.variant_seed(VariantNameSeed)?;
 
         let mut partial = self
             .partial
@@ -636,16 +672,18 @@ impl<'de> Visitor<'de> for EnumVisitor {
                 partial = variant_access.tuple_variant(field_count, visitor)?;
             }
             StructKind::Struct => {
-                let field_names: Vec<&'static str> = {
+                let field_names = {
                     let (_, v) = partial.find_variant(&variant_name).unwrap();
-                    v.data
-                        .fields
-                        .iter()
-                        .map(|f: &facet::Field| f.effective_name())
-                        .collect()
+                    cached_static_str_slice(std::ptr::from_ref(v) as usize, || {
+                        v.data
+                            .fields
+                            .iter()
+                            .map(|f: &facet::Field| f.effective_name())
+                            .collect()
+                    })
                 };
                 let visitor = StructVisitor { partial };
-                partial = variant_access.struct_variant(Vec::leak(field_names), visitor)?;
+                partial = variant_access.struct_variant(field_names, visitor)?;
             }
         }
 

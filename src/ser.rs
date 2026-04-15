@@ -1,8 +1,26 @@
 use facet::{Def, Shape, StructKind, Type, UserType};
 use facet_maybe_mut::MaybeMut;
 use facet_reflect::{HasFields, Peek, PeekEnum, ScalarType};
-use serde::ser::{SerializeMap, SerializeSeq, SerializeTupleStruct, SerializeTupleVariant};
+use serde::ser::{
+    SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleStruct,
+    SerializeTupleVariant,
+};
 use serde::{Serialize, Serializer};
+use std::collections::HashSet;
+use std::sync::{Mutex, OnceLock};
+
+fn cached_static_str(s: &str) -> &'static str {
+    static CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashSet::new()));
+    let mut set = cache.lock().unwrap();
+    if let Some(&existing) = set.get(s) {
+        existing
+    } else {
+        let leaked: &'static str = Box::leak(s.to_owned().into_boxed_str());
+        set.insert(leaked);
+        leaked
+    }
+}
 
 /// A wrapper around [`Peek`] that implements [`serde::Serialize`].
 ///
@@ -161,10 +179,16 @@ fn serialize_struct<'mem, 'facet, S: Serializer>(
         }
         StructKind::Struct => {
             // Use SerializeMap to avoid the &'static str requirement of SerializeStruct
-            let mut state = serializer.serialize_map(None)?;
+            let mut state = serializer.serialize_struct(name, ps.field_count())?;
             for (field_item, peek) in ps.fields_for_serialize() {
-                let field_name = field_item.effective_name();
-                state.serialize_entry(field_name, &PeekSerialize(peek))?;
+                let name: &'static str = if let Some(field) = field_item.field
+                    && field.effective_name() == field_item.effective_name()
+                {
+                    field.effective_name()
+                } else {
+                    cached_static_str(field_item.effective_name())
+                };
+                state.serialize_field(name, &PeekSerialize(peek))?;
             }
             state.end()
         }
@@ -209,30 +233,24 @@ fn serialize_enum<'mem, 'facet, S: Serializer>(
             state.end()
         }
         StructKind::Struct => {
-            // Use a map-based serialization to avoid &'static str requirement
-            // Serialize as externally tagged: { "VariantName": { field: value, ... } }
-            let mut map = serializer.serialize_map(Some(1))?;
-            map.serialize_key(variant_name)?;
-            // Inner struct as a map
-            let inner = StructVariantMapValue { fields: &fields };
-            map.serialize_value(&inner)?;
-            map.end()
+            let mut state = serializer.serialize_struct_variant(
+                enum_name,
+                variant_idx as u32,
+                variant_name,
+                fields.len(),
+            )?;
+            for (field_item, peek) in &fields {
+                let name: &'static str = if let Some(field) = field_item.field
+                    && field.effective_name() == field_item.effective_name()
+                {
+                    field.effective_name()
+                } else {
+                    cached_static_str(field_item.effective_name())
+                };
+                state.serialize_field(name, &PeekSerialize(*peek))?;
+            }
+            state.end()
         }
-    }
-}
-
-struct StructVariantMapValue<'a, 'mem, 'facet> {
-    fields: &'a [(facet_reflect::FieldItem, Peek<'mem, 'facet>)],
-}
-
-impl<'a, 'mem, 'facet> Serialize for StructVariantMapValue<'a, 'mem, 'facet> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut state = serializer.serialize_map(Some(self.fields.len()))?;
-        for (field_item, peek) in self.fields {
-            let field_name = field_item.effective_name();
-            state.serialize_entry(field_name, &PeekSerialize(*peek))?;
-        }
-        state.end()
     }
 }
 
