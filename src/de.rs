@@ -96,12 +96,21 @@ impl<'de> DeserializeSeed<'de> for PartialSeed {
                     };
                     deserializer.deserialize_struct(shape.effective_name(), field_names, visitor)
                 }
-                StructKind::TupleStruct | StructKind::Tuple => {
+                StructKind::TupleStruct => {
                     let len = st.fields.len();
                     let visitor = TupleStructVisitor {
                         partial: self.partial,
+                        field_count: len,
                     };
                     deserializer.deserialize_tuple_struct(shape.effective_name(), len, visitor)
+                }
+                StructKind::Tuple => {
+                    let len = st.fields.len();
+                    let visitor = TupleStructVisitor {
+                        partial: self.partial,
+                        field_count: len,
+                    };
+                    deserializer.deserialize_tuple(len, visitor)
                 }
                 StructKind::Unit => {
                     let visitor = UnitStructVisitor {
@@ -317,10 +326,31 @@ impl<'de> Visitor<'de> for StructVisitor {
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
         let mut partial = self.partial;
+        let mut visited = Vec::new();
         while let Some(key) = map.next_key::<String>()? {
+            visited.push(key.clone());
             partial = partial.begin_field(&key).map_err(de::Error::custom)?;
             partial = map.next_value_seed(PartialSeed { partial })?;
             partial = partial.end().map_err(de::Error::custom)?;
+        }
+        // Set defaults for fields that were not present in the data.
+        // This handles fields skipped during serialization (e.g. skip_serializing_if).
+        let shape = partial.shape();
+        if let Type::User(UserType::Struct(st)) = &shape.ty {
+            for (idx, field) in st.fields.iter().enumerate() {
+                if !visited.iter().any(|v| v == field.effective_name()) {
+                    // Only attempt if the field's type supports Default.
+                    let can_default = field
+                        .shape()
+                        .type_ops
+                        .is_some_and(|ops| ops.has_default_in_place());
+                    if can_default {
+                        partial = partial
+                            .set_nth_field_to_default(idx)
+                            .map_err(de::Error::custom)?;
+                    }
+                }
+            }
         }
         Ok(partial)
     }
@@ -330,6 +360,7 @@ impl<'de> Visitor<'de> for StructVisitor {
 
 struct TupleStructVisitor {
     partial: Partial<'static, false>,
+    field_count: usize,
 }
 
 impl<'de> Visitor<'de> for TupleStructVisitor {
@@ -340,11 +371,7 @@ impl<'de> Visitor<'de> for TupleStructVisitor {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        let shape = self.partial.shape();
-        let field_count = match &shape.ty {
-            Type::User(UserType::Struct(st)) => st.fields.len(),
-            _ => 0,
-        };
+        let field_count = self.field_count;
         let mut partial = self.partial;
         for idx in 0..field_count {
             partial = partial.begin_nth_field(idx).map_err(de::Error::custom)?;
@@ -668,7 +695,10 @@ impl<'de> Visitor<'de> for EnumVisitor {
                 partial = partial.end().map_err(de::Error::custom)?;
             }
             StructKind::TupleStruct | StructKind::Tuple => {
-                let visitor = TupleStructVisitor { partial };
+                let visitor = TupleStructVisitor {
+                    partial,
+                    field_count,
+                };
                 partial = variant_access.tuple_variant(field_count, visitor)?;
             }
             StructKind::Struct => {

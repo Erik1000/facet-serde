@@ -2,8 +2,8 @@ use facet::{Def, Shape, StructKind, Type, UserType};
 use facet_maybe_mut::MaybeMut;
 use facet_reflect::{HasFields, Peek, PeekEnum, ScalarType};
 use serde::ser::{
-    SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTupleStruct,
-    SerializeTupleVariant,
+    SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
+    SerializeTupleStruct, SerializeTupleVariant,
 };
 use serde::{Serialize, Serializer};
 use std::collections::HashSet;
@@ -171,16 +171,16 @@ fn serialize_struct<'mem, 'facet, S: Serializer>(
         }
         StructKind::Tuple => {
             let fields: Vec<_> = ps.fields_for_serialize().collect();
-            let mut state = serializer.serialize_tuple_struct("", fields.len())?;
+            let mut state = serializer.serialize_tuple(fields.len())?;
             for (_, peek) in &fields {
-                state.serialize_field(&PeekSerialize(*peek))?;
+                state.serialize_element(&PeekSerialize(*peek))?;
             }
             state.end()
         }
         StructKind::Struct => {
-            // Use SerializeMap to avoid the &'static str requirement of SerializeStruct
-            let mut state = serializer.serialize_struct(name, ps.field_count())?;
-            for (field_item, peek) in ps.fields_for_serialize() {
+            let fields: Vec<_> = ps.fields_for_serialize().collect();
+            let mut state = serializer.serialize_struct(name, fields.len())?;
+            for (field_item, peek) in &fields {
                 let name: &'static str = if let Some(field) = field_item.field
                     && field.effective_name() == field_item.effective_name()
                 {
@@ -188,7 +188,7 @@ fn serialize_struct<'mem, 'facet, S: Serializer>(
                 } else {
                     cached_static_str(field_item.effective_name())
                 };
-                state.serialize_field(name, &PeekSerialize(peek))?;
+                state.serialize_field(name, &PeekSerialize(*peek))?;
             }
             state.end()
         }
