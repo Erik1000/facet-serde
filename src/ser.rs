@@ -1,4 +1,5 @@
 use facet::{Def, Shape, StructKind, Type, UserType};
+use facet_maybe_mut::MaybeMut;
 use facet_reflect::{HasFields, Peek, PeekEnum, ScalarType};
 use serde::ser::{SerializeMap, SerializeSeq, SerializeTupleStruct, SerializeTupleVariant};
 use serde::{Serialize, Serializer};
@@ -11,7 +12,9 @@ pub(crate) struct PeekSerialize<'mem, 'facet>(pub Peek<'mem, 'facet>);
 
 impl<'mem, 'facet> Serialize for PeekSerialize<'mem, 'facet> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let peek = self.0.innermost_peek();
+        let maybe_mut = MaybeMut::Not(self.0);
+        let guard = maybe_mut.read().map_err(serde::ser::Error::custom)?;
+        let peek = guard.as_peek();
         serialize_peek(peek, serializer)
     }
 }
@@ -293,5 +296,5 @@ fn serialize_pointer<S: Serializer>(peek: Peek<'_, '_>, serializer: S) -> Result
     let inner = ptr
         .borrow_inner()
         .ok_or_else(|| serde::ser::Error::custom("cannot borrow pointer inner value"))?;
-    serialize_peek(inner, serializer)
+    PeekSerialize(inner).serialize(serializer)
 }
