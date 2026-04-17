@@ -1,4 +1,4 @@
-use facet::{Def, Facet, Shape, StructKind, Type, UserType};
+use facet::{Def, Facet, FieldFlags, Shape, StructKind, Type, UserType};
 use facet_reflect::{Partial, ScalarType};
 use serde::Deserializer;
 use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
@@ -327,11 +327,73 @@ impl<'de> Visitor<'de> for StructVisitor {
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
         let mut partial = self.partial;
         let mut visited = Vec::new();
+
+        // Check for flattened fields upfront. If any exist, enable deferred mode so
+        // that re-entering a partially-built flatten frame restores its state rather
+        // than starting fresh.
+        let has_flatten = {
+            let shape = partial.shape();
+            if let Type::User(UserType::Struct(st)) = &shape.ty {
+                st.fields
+                    .iter()
+                    .any(|f| f.flags.contains(FieldFlags::FLATTEN))
+            } else {
+                false
+            }
+        };
+        if has_flatten {
+            partial = partial.begin_deferred().map_err(de::Error::custom)?;
+        }
+
         while let Some(key) = map.next_key::<String>()? {
             visited.push(key.clone());
-            partial = partial.begin_field(&key).map_err(de::Error::custom)?;
-            partial = map.next_value_seed(PartialSeed { partial })?;
-            partial = partial.end().map_err(de::Error::custom)?;
+            // Check if this key is a direct field of the current struct.
+            if partial.field_index(&key).is_some() {
+                partial = partial.begin_field(&key).map_err(de::Error::custom)?;
+                partial = map.next_value_seed(PartialSeed { partial })?;
+                partial = partial.end().map_err(de::Error::custom)?;
+            } else {
+                // Look for the key inside a flattened field.
+                let shape = partial.shape();
+                let flatten_field_name = if let Type::User(UserType::Struct(st)) = &shape.ty {
+                    st.fields
+                        .iter()
+                        .filter(|f| f.flags.contains(FieldFlags::FLATTEN))
+                        .find(|f| {
+                            if let Type::User(UserType::Struct(inner_st)) = &f.shape().ty {
+                                inner_st.fields.iter().any(|sf| sf.effective_name() == key)
+                            } else {
+                                false
+                            }
+                        })
+                        .map(|f| f.effective_name())
+                } else {
+                    None
+                };
+                if let Some(flatten_name) = flatten_field_name {
+                    // Also mark the flatten field itself as "visited" for defaults.
+                    if !visited.iter().any(|v: &String| v == flatten_name) {
+                        visited.push(flatten_name.to_owned());
+                    }
+                    // In deferred mode, begin_field on an already-stored flatten frame
+                    // restores it so we can add the next sub-field.
+                    partial = partial
+                        .begin_field(flatten_name)
+                        .map_err(de::Error::custom)?;
+                    partial = partial.begin_field(&key).map_err(de::Error::custom)?;
+                    partial = map.next_value_seed(PartialSeed { partial })?;
+                    partial = partial.end().map_err(de::Error::custom)?;
+                    // end() in deferred mode stores the flatten frame for re-entry.
+                    partial = partial.end().map_err(de::Error::custom)?;
+                } else {
+                    // Unknown key — consume and discard the value.
+                    map.next_value::<de::IgnoredAny>()?;
+                }
+            }
+        }
+
+        if has_flatten {
+            partial = partial.finish_deferred().map_err(de::Error::custom)?;
         }
         // Set defaults for fields that were not present in the data.
         // This handles fields skipped during serialization (e.g. skip_serializing_if).

@@ -72,6 +72,19 @@ struct WithTuple {
 #[derive(Facet, Debug, PartialEq, Clone)]
 struct Empty;
 
+#[derive(Facet, Debug, PartialEq, Clone)]
+struct Address {
+    street: String,
+    city: String,
+}
+
+#[derive(Facet, Debug, PartialEq, Clone)]
+struct Person {
+    name: String,
+    #[facet(flatten)]
+    address: Address,
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 /// Serialize with facet-serde (via serde_json), deserialize back, and assert equality.
@@ -362,4 +375,18 @@ fn facet_json_output_matches_serde_for_nested() {
     let serde_val: serde_json::Value = serde_json::from_str(&serde_json_str).unwrap();
     let facet_val: serde_json::Value = serde_json::from_str(&facet_json_str).unwrap();
     assert_eq!(serde_val, facet_val);
+}
+
+#[test]
+fn serde_flatten_nested_struct() {
+    // Person flattens Address, so the JSON looks like
+    // {"name":"Alice","street":"123 Main St","city":"Springfield"}
+    // rather than nesting address under a key.
+    serde_roundtrip(Person {
+        name: "Alice".to_string(),
+        address: Address {
+            street: "123 Main St".to_string(),
+            city: "Springfield".to_string(),
+        },
+    });
 }
