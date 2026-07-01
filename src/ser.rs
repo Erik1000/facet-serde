@@ -7,19 +7,33 @@ use serde::ser::{
 };
 use serde::{Serialize, Serializer};
 use std::collections::HashSet;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{OnceLock, RwLock};
 
+/// Intern non-static strings (e.g. renamed field names sourced from
+/// attributes) into `&'static str` so they can be passed to serde APIs
+/// like `serialize_struct` that require `'static` names.
+///
+/// Read-heavy: after the first serialization of a given name it's a pure
+/// lookup. `RwLock` allows concurrent readers; `Mutex` would serialize them
+/// pointlessly.
 fn cached_static_str(s: &str) -> &'static str {
-    static CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
-    let cache = CACHE.get_or_init(|| Mutex::new(HashSet::new()));
-    let mut set = cache.lock().unwrap();
-    if let Some(&existing) = set.get(s) {
-        existing
-    } else {
-        let leaked: &'static str = Box::leak(s.to_owned().into_boxed_str());
-        set.insert(leaked);
-        leaked
+    static CACHE: OnceLock<RwLock<HashSet<&'static str>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| RwLock::new(HashSet::new()));
+
+    // Fast path: shared read lock — no allocation, no contention with other readers.
+    if let Some(&existing) = cache.read().unwrap().get(s) {
+        return existing;
     }
+
+    // Slow path: acquire the write lock and re-check in case another thread
+    // interned the same string between our read and write acquisitions.
+    let mut set = cache.write().unwrap();
+    if let Some(&existing) = set.get(s) {
+        return existing;
+    }
+    let leaked: &'static str = Box::leak(s.to_owned().into_boxed_str());
+    set.insert(leaked);
+    leaked
 }
 
 /// A wrapper around [`Peek`] that implements [`serde::Serialize`].

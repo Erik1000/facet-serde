@@ -4,15 +4,37 @@ use serde::Deserializer;
 use serde::de::{self, DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{OnceLock, RwLock};
 
+/// Cache mapping the address of a static `StructType` / `Variant` to a
+/// leaked `&'static [&'static str]` of its field or variant names.
+///
+/// Serde's `deserialize_struct` / `deserialize_enum` require `&'static`
+/// slices, but facet only exposes `&'static [Field]` / `&'static [Variant]`
+/// — the individual names are already `'static`, only the slice layout has
+/// to be materialized once and leaked.
+///
+/// Access is overwhelmingly read-heavy: each unique shape triggers one
+/// write, all subsequent deserializations of the same shape are pure reads.
+/// A `RwLock` lets those reads run concurrently across threads (a plain
+/// `Mutex` would needlessly serialize them). A thread-local would avoid the
+/// lock entirely but at the cost of leaking a fresh `Vec` per (thread, shape)
+/// pair, which is worse for long-lived multi-threaded services.
 fn cached_static_str_slice(
     key: usize,
     compute: impl FnOnce() -> Vec<&'static str>,
 ) -> &'static [&'static str] {
-    static CACHE: OnceLock<Mutex<HashMap<usize, &'static [&'static str]>>> = OnceLock::new();
-    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    let mut map = cache.lock().unwrap();
+    static CACHE: OnceLock<RwLock<HashMap<usize, &'static [&'static str]>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+
+    // Fast path: shared read lock. After warmup, this is the only path taken.
+    if let Some(&slice) = cache.read().unwrap().get(&key) {
+        return slice;
+    }
+
+    // Slow path: upgrade to a write lock. Re-check in case another thread
+    // populated the entry between our read and write acquisitions.
+    let mut map = cache.write().unwrap();
     map.entry(key).or_insert_with(|| Vec::leak(compute()))
 }
 
