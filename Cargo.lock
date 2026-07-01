@@ -12,6 +12,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloca"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5a7d05ea6aea7e9e64d25b9156ba2fee3fdd659e34e41063cd2fc7cd020d7f4"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -55,6 +64,16 @@ name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
+
+[[package]]
+name = "cc"
+version = "1.2.65"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e228eec9be7c17ccb640b59b36a5cd805ea2a564a4c5e162c2f659fea30d3b96"
+dependencies = [
+ "find-msvc-tools",
+ "shlex",
+]
 
 [[package]]
 name = "cfg-if"
@@ -131,25 +150,24 @@ dependencies = [
 
 [[package]]
 name = "criterion"
-version = "0.5.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2b12d017a929603d80db1831cd3a24082f8137ce19c69e6447f54f5fc8d692f"
+checksum = "950046b2aa2492f9a536f5f4f9a3de7b9e2476e575e05bd6c333371add4d98f3"
 dependencies = [
+ "alloca",
  "anes",
  "cast",
  "ciborium",
  "clap",
  "criterion-plot",
- "is-terminal",
  "itertools",
  "num-traits",
- "once_cell",
  "oorandom",
+ "page_size",
  "plotters",
  "rayon",
  "regex",
  "serde",
- "serde_derive",
  "serde_json",
  "tinytemplate",
  "walkdir",
@@ -157,9 +175,9 @@ dependencies = [
 
 [[package]]
 name = "criterion-plot"
-version = "0.5.0"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
+checksum = "d8d80a2f4f5b554395e47b5d8305bc3d27813bacb73493eb1001e8f76dae29ea"
 dependencies = [
  "cast",
  "itertools",
@@ -233,9 +251,9 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "facet"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df488bcda61dde160301ee6bce43d42397db599ffc689381a1873b5f035135f9"
+checksum = "cd3e58a40571ddd336865ec9643ea43d5cf93c35ae4f5ad5d903dc4e427a2e03"
 dependencies = [
  "autocfg",
  "facet-core",
@@ -244,9 +262,9 @@ dependencies = [
 
 [[package]]
 name = "facet-core"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c33cf9d80307e9a29f93e5a65ddb65b227b5fa082d649c65d4083345f5d398d0"
+checksum = "a2c2ad271d54e76358f179bc5f75483c4ed025d1009a8599f299ac7bee99dbdd"
 dependencies = [
  "autocfg",
  "const-fnv1a-hash",
@@ -256,9 +274,9 @@ dependencies = [
 
 [[package]]
 name = "facet-dessert"
-version = "0.46.0"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4505ec8ef086d776fd99b86fb17e3d1c711188d27aa72845e64a30146226e3b"
+checksum = "39aaece2ca1e5aad3e2bee0f4fea23ae0a11eb5a0b88bb265ec09c39d580aac5"
 dependencies = [
  "facet-core",
  "facet-reflect",
@@ -266,9 +284,9 @@ dependencies = [
 
 [[package]]
 name = "facet-format"
-version = "0.47.1"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2353807588cc4057a5e31bf459e7304ea84729ad77080e267928b1e09d36235"
+checksum = "64c612924dc3d45853f81e9cfafc513f3ec0be5982f943a7945f49f2492effb1"
 dependencies = [
  "facet-core",
  "facet-dessert",
@@ -279,21 +297,22 @@ dependencies = [
 
 [[package]]
 name = "facet-json"
-version = "0.46.1"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6fbb1d8aa586b5e6b189575d1eda196cd3014347aff36be8dd097401024fe6d"
+checksum = "82902c758e29af6599f852dd783206697fd33383fa499b07bdcddbd8eb1ef4d0"
 dependencies = [
  "facet",
  "facet-core",
  "facet-format",
  "facet-reflect",
+ "weavy",
 ]
 
 [[package]]
 name = "facet-macro-parse"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5ab349bd1823fbfa129e595a826ef7fb4d1b9c7215428b28de18044d009dbc1"
+checksum = "77a43cd88c3df76b7606194a059973aea078940de8cc442dca7c327f51bbc014"
 dependencies = [
  "facet-macro-types",
  "proc-macro2",
@@ -302,9 +321,9 @@ dependencies = [
 
 [[package]]
 name = "facet-macro-types"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79622a74665b47d1744998dd0d15b73eb0eecdfeb16630b436c5f03365b02e55"
+checksum = "7dce57ed093067e4a3a1ab42c8c84eec1a25af7726d43a22e390734b29b947ec"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -313,18 +332,18 @@ dependencies = [
 
 [[package]]
 name = "facet-macros"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6656fc7457975f5e1c86791b7a810c40ba53993823ae655f7c331e808c4b5ff"
+checksum = "6ae8b8eb7169a41245f31bda2912a3c7d33e0efa7269c0c8847b54377e31ff68"
 dependencies = [
  "facet-macros-impl",
 ]
 
 [[package]]
 name = "facet-macros-impl"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f462bad2b5a574b2c94e9ad54162704ceacf3200741b4f0fb88020936b9003ec"
+checksum = "53d7d66574a47f07e87058ce6e429a7be58fd77c7686e572cb1f85d8a6a840c6"
 dependencies = [
  "facet-macro-parse",
  "facet-macro-types",
@@ -336,9 +355,9 @@ dependencies = [
 
 [[package]]
 name = "facet-maybe-mut"
-version = "0.3.0"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5458deae252df22386d650fe502089ef18858647b95a966a09fb5c01770bf1c4"
+checksum = "3beb0952be98442840e3408fc1e596792a1b5d32857f27d9ed9d41c1f9ff53e7"
 dependencies = [
  "derive_more",
  "facet",
@@ -348,18 +367,18 @@ dependencies = [
 
 [[package]]
 name = "facet-path"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20670a58be24eb604b76ed3a9ca719e5cc5e11b0885dc3847ebb899aa95bf1bc"
+checksum = "3a21c558bfb27bf957ead130a3b7e5ea2dee7ccbfb31a524053f061efa164d6f"
 dependencies = [
  "facet-core",
 ]
 
 [[package]]
 name = "facet-reflect"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "399876f2bded4a572385dc414336aad0002ce4b4154cd0d1cfe9d1881243c400"
+checksum = "8486d2a82dcb2a1bdca472c2cdc513d0feacda3af2ffd50fb9e04f8dedda8735"
 dependencies = [
  "facet-core",
  "facet-path",
@@ -369,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "facet-serde"
-version = "0.1.0"
+version = "0.50.0-rc.5"
 dependencies = [
  "criterion",
  "derive_more",
@@ -384,14 +403,20 @@ dependencies = [
 
 [[package]]
 name = "facet-solver"
-version = "0.46.5"
+version = "0.50.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86cab172249e0d68bf57f804e97b18e375e3fc4a46300f2a4ea6e31e6c1fa4df"
+checksum = "d5c800eb08ef5e1f18ffafcddf40da5d9ea3c86b8f0486f6ee077b0a3d497812"
 dependencies = [
  "facet-core",
  "facet-reflect",
  "strsim",
 ]
+
+[[package]]
+name = "find-msvc-tools"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "foldhash"
@@ -455,12 +480,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermit-abi"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc0fef456e4baa96da950455cd02c081ca953b141298e41db3fc7e36b1da849c"
-
-[[package]]
 name = "iddqd"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -479,21 +498,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a46645bbd70538861a90d0f26c31537cdf1e44aae99a794fb75a664b70951bc"
 
 [[package]]
-name = "is-terminal"
-version = "0.4.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
-dependencies = [
- "hermit-abi",
- "libc",
- "windows-sys",
-]
-
-[[package]]
 name = "itertools"
-version = "0.10.5"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -553,6 +561,16 @@ name = "oorandom"
 version = "11.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
+
+[[package]]
+name = "page_size"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30d5b2194ed13191c1999ae0704b7839fb18384fa22e49b57eeaa97d79ce40da"
+dependencies = [
+ "libc",
+ "winapi",
+]
 
 [[package]]
 name = "pin-project-lite"
@@ -749,6 +767,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "shlex"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+
+[[package]]
 name = "slab"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -898,6 +922,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "weavy"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30261027ea4225cf7c8287aa70bd103c1e78508606c77caf24bb468326ce7b5f"
+
+[[package]]
 name = "web-sys"
 version = "0.3.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -908,6 +938,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "winapi"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
+dependencies = [
+ "winapi-i686-pc-windows-gnu",
+ "winapi-x86_64-pc-windows-gnu",
+]
+
+[[package]]
+name = "winapi-i686-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
 name = "winapi-util"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -915,6 +961,12 @@ checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
  "windows-sys",
 ]
+
+[[package]]
+name = "winapi-x86_64-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows-link"
